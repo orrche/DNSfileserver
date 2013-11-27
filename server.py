@@ -1,4 +1,5 @@
 import socket
+from string import find
 
 class DNSQuery:
   def __init__(self, data):
@@ -19,10 +20,11 @@ class DNSQuery:
     if self.dominio:
       packet+=self.data[:2] + "\x81\x80"
       packet+=self.data[4:6] + self.data[4:6] + '\x00\x00\x00\x00'   # Questions and Answers Counts
-      packet+=self.data[12:]                                         # Original Domain Name Question
+      packet+=self.data[12:27]                                         # Original Domain Name Question
       packet+='\xc0\x0c'                                             # Pointer to domain name
-      packet+='\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04'             # Response type, ttl and resource data length -> 4 bytes
-      packet+=str.join('',map(lambda x: chr(int(x)), ip.split('.'))) # 4bytes of IP
+      packet+='\x00\x10\x00\x01\x00\x00\x00\x3c\x00\x0c\x05'             # Response type, ttl and resource data length -> 4 bytes
+      packet+='hhejh' + '\x05hejdd'
+      packet+=self.data[27:]
     return packet
 
 if __name__ == '__main__':
