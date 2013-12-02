@@ -39,12 +39,16 @@ class DNSQuery:
 			packet += '\xc0\x0c'                                             # Pointer to domain name
 			packet += '\x00\x10\x00\x01\x00\x00\x00\x3c'
 			
-			data = fileServer.getData(int(domainData[0], 16),200)
+			data = fileServer.getData(int(domainData[0], 16),256)
 
-			packet += '\x00' + chr(len(data)+7)             # Response type, ttl and resource data length -> 4 bytes
+			# Calculate number of chunks
+			chunks =  int(len(data)/256)
+			if ( chunks == 0 ):
+				chunks = 1
+
+			packet += '\x00' + chr(len(data)+chunks)             # Response type, ttl and resource data length -> 4 bytes
 			print int(domainData[0], 16)
 			packet += chr(len(data)) + data 
-			packet += '\x05\x00ejdd'
 			packet+=self.data[27:]
 		return packet
 
