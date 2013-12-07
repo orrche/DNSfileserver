@@ -1,5 +1,6 @@
-import dns.resolver
+import ConfigParser, os
 
+import dns.resolver
 import dns.message
 import dns.query
 import dns.flags
@@ -7,14 +8,17 @@ import dns.flags
 import sys
 
 
+config = ConfigParser.ConfigParser()
+config.read(['config.cfg'])
 
 chunk = 0
 
 while True:
-	domain = hex(chunk)[2:] + '.minoris.se'
+	domain = hex(chunk)[2:] + '.' + config.get('client', 'dnspostfix')
+	print domain
 
 	resolver = dns.resolver.Resolver()
-	resolver.nameservers = ['192.168.0.10']
+	resolver.nameservers = [config.get('client', 'nameserver')]
 
 	answers = resolver.query(domain, dns.rdatatype.TXT)
 
