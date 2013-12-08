@@ -1,5 +1,11 @@
 import socket
+import ConfigParser, os
 from string import find
+
+
+config = ConfigParser.ConfigParser()
+config.read(['config.cfg'])
+
 
 class FileServer:
 	def __init__(self):
@@ -25,46 +31,53 @@ class DNSQuery:
 				ini+=lon+1
 				lon=ord(data[ini])
 
-	def respuesta(self, ip):
+	def response(self):
 		packet=''
 		if self.domain:
 			domainData = self.domain.split(".")
-			print domainData
 
+			chunkNr = -1;
+			try:
+				chunkNr = int(domainData[0],16)
+			except ValueError:
+				return False;
+
+			# prepearing the dns header
 			packet+=self.data[:2] + "\x81\x80"
-			packet+=self.data[4:6] + self.data[4:6] + '\x00\x00\x00\x00'   # Questions and Answers Counts
-			packet+=self.data[12:12 + 5 + len(self.domain)]                                         # Original Domain Name Question
-			packet += '\xc0\x0c'                                             # Pointer to domain name
-			packet += '\x00\x10\x00\x01\x00\x00\x00\x3c'
+			packet+=self.data[4:6] + self.data[4:6] + '\x00\x00\x00\x00'
+			packet+=self.data[12:12 + 5 + len(self.domain)]
+			packet += '\xc0\x0c'
+			packet += '\x00\x10\x00\x01\x00\x00\x3c\x3c'
 			
-			data = fileServer.getData(int(domainData[0], 16) * 4096 ,4096)
+			data = fileServer.getData(chunkNr * 500 ,500)
 
 			# Calculate number of chunks
-			chunks =  int(len(data)/256) + 1
+			chunks = int(len(data)/256) + 1
 			
 			size = len(data) + chunks 
-			packet += chr((size & 0xFF00)>>8) + chr(size & 0x00FF)             # Response type, ttl and resource data length -> 4 bytes
+			packet += chr((size & 0xFF00)>>8) + chr(size & 0x00FF)
 
 			for x in range(chunks + 1):
 				dataChunk = data[x*255:x*255+255]
 				packet += chr(len(dataChunk)) + dataChunk 
-			#packet+=self.data[27:]
 		return packet
 
 if __name__ == '__main__':
 	fileServer = FileServer()
-	ip='192.168.1.1'
-	print 'pyminifakeDNS:: dom.query. 60 IN A %s' % ip
   
 	udps = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	udps.bind(('192.168.0.10',53))
+
+	bindAddr = config.get('server', 'bind')
+	udps.bind((bindAddr,53))
   
 	try:
 		while 1:
 			data, addr = udps.recvfrom(1024)
 			p=DNSQuery(data, fileServer)
-			udps.sendto(p.respuesta(ip)[:-1], addr)
-			print 'Respuesta: %s -> %s' % (p.domain, ip)
+			response = p.response()
+			if ( response != False ): 
+				udps.sendto(response[0:-1], addr)
+				print 'TXT chunk for - to: %s -> %s' % (p.domain[0:-1], addr[0])
 	except KeyboardInterrupt:
-		print 'Finalizando'
+		print 'Terminated'
 		udps.close()
