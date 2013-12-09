@@ -14,8 +14,7 @@ config.read(['config.cfg'])
 chunk = 0
 
 while True:
-	domain = hex(chunk)[2:] + '.' + config.get('client', 'dnspostfix')
-	print domain
+	domain = hex(chunk)[2:] + '.' + sys.argv[1]
 
 	resolver = dns.resolver.Resolver()
 	resolver.nameservers = [config.get('client', 'nameserver')]
