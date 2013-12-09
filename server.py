@@ -1,7 +1,7 @@
 import socket
 import ConfigParser, os
 from string import find
-
+import string
 
 config = ConfigParser.ConfigParser()
 config.read(['config.cfg'])
@@ -29,7 +29,8 @@ class DNSQuery:
 
 			domainData = fileData.split(".")
 
-			filepath = os.path.join('public', '/'.join(domainData[1:]))
+			filepath = string.replace(os.path.join('public', '/'.join(domainData[1:])), '_', '.')
+						
 			f = open(filepath, 'r')
 
 			print domainData
