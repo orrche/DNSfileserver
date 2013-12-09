@@ -6,22 +6,13 @@ from string import find
 config = ConfigParser.ConfigParser()
 config.read(['config.cfg'])
 
-
-class FileServer:
-	def __init__(self):
-		self.f = open('workfile', 'r')
-	def getData(self, position, l):
-		self.f.seek(position, 0)
-		return self.f.read(l)
-		
-
-
 class DNSQuery:
-	def __init__(self, data, fileServer):
+	def __init__(self, data, dnspostfix):
 		self.data=data
 		self.domain=''
-		self.fileServer = fileServer
-		
+		self.dnspostfix = dnspostfix
+		self.dnspostfixlen = len(dnspostfix)
+
 		tipo = (ord(data[2]) >> 3) & 15   # Opcode bits
 		if tipo == 0:                     # Standard query
 			ini=12
@@ -34,7 +25,14 @@ class DNSQuery:
 	def response(self):
 		packet=''
 		if self.domain:
-			domainData = self.domain.split(".")
+			fileData = self.domain[0: -(self.dnspostfixlen+2)]
+
+			domainData = fileData.split(".")
+
+			filepath = os.path.join('public', '/'.join(domainData[1:]))
+			f = open(filepath, 'r')
+
+			print domainData
 
 			chunkNr = -1;
 			try:
@@ -49,7 +47,8 @@ class DNSQuery:
 			packet += '\xc0\x0c'
 			packet += '\x00\x10\x00\x01\x00\x00\x3c\x3c'
 			
-			data = fileServer.getData(chunkNr * 500 ,500)
+			f.seek(chunkNr*500)
+			data = f.read(500)
 
 			# Calculate number of chunks
 			chunks = int(len(data)/256) + 1
@@ -63,8 +62,6 @@ class DNSQuery:
 		return packet
 
 if __name__ == '__main__':
-	fileServer = FileServer()
-  
 	udps = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 	bindAddr = config.get('server', 'bind')
@@ -73,7 +70,7 @@ if __name__ == '__main__':
 	try:
 		while 1:
 			data, addr = udps.recvfrom(1024)
-			p=DNSQuery(data, fileServer)
+			p=DNSQuery(data, config.get('server', 'dnspostfix'))
 			response = p.response()
 			if ( response != False ): 
 				udps.sendto(response[0:-1], addr)
